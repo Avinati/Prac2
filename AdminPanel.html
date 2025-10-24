@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель администратора</title>
+    <link rel="stylesheet" href="AdminPanel.css">
+</head>
+<body>
+<!-- Чердак -->
+    <div class="header-box">
+        <div class="header-container">
+            <a class="logo-container" href="Main.html" style="text-decoration: none; color: inherit;">
+                <img src="media/logo.png" class="logo">
+                <h1 class="title">Корочки.есть</h1>
+                <h3 class="undertitle">Только "Не" качественное государственное оброзование.</h3>
+            </a>
+            <div class="buttons">
+                <a href="ApplicationReviewPage.html" class="btn1">Ваши заявки</a>
+                <a href="RequestFormationPage.html" class="btn2">Подать заявку</a>
+            </div>
+        </div>
+    </div>
+
+<!-- Основной контент -->
+    <div class="main-container">
+           <div class="somthing-container">
+        <h2 class="t1">Админ-панель:</h2>
+    </div>
+    <div id="loginForm" class="login-form">
+            <h2>Вход в панель администратора</h2>
+            <input type="text" id="username" placeholder="Логин" required>
+            <input type="password" id="password" placeholder="Пароль" required>
+            <button onclick="login()">Войти</button>
+            <div id="loginError" style="color: red; text-align: center; margin-top: 10px;"></div>
+        </div>
+
+        <!-- Панель администратора -->
+        <div id="adminPanel" class="hidden">
+            <div class="admin-header">
+                <h2 class="t1">Админ-панель</h2>
+                <button class="logout-btn" onclick="logout()">Выйти</button>
+            </div>
+            
+            <div class="somthing-container">
+                <h3>Управление заявками</h3>
+            </div>
+            
+            <table class="applications-table">
+                <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Email</th>
+                        <th>Программа</th>
+                        <th>Дата подачи</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="applicationsTableBody">
+                    <!-- Данные будут заполнены через JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+<!-- Подвал -->
+    <div class="footer-box">
+        <div class="footer-container">
+            <a class="logo-container" href="Main.html" style="text-decoration: none; color: inherit;">
+                <img src="media/logo.png" class="logo">
+                <h1 class="title">Корочки.есть</h1>
+                <h3 class="undertitle">Только "Не" качественное государственное оброзование.</h3>
+            </a>
+            <div class="footer-columns">
+                <div class="footer-column">
+                    <li>Страницы</li>
+                    <ul>
+                        <li><a href="Main.html" style="text-decoration: none; color: inherit;">Главная</a></li>
+                        <li><a href="ApplicationReviewPage.html" style="text-decoration: none; color: inherit;">Страница просмотра заявок</a></li>
+                        <li><a href="RequestFormationPage.html" style="text-decoration: none; color: inherit;">Страница формирования заявки</a></li>
+                        <li><a href="AdminPanel.html" style="text-decoration: none; color: inherit;">Админ-панель</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <li>Документация</li>
+                    <ul>
+                        <li><a href="#" style="text-decoration: none; color: inherit;">Условия пользователя</a></li>
+                        <li><a href="#" style="text-decoration: none; color: inherit;">Условия использования</a></li>
+                        <li><a href="#" style="text-decoration: none; color: inherit;">Политика куки</a></li>
+                        <li><a href="#" style="text-decoration: none; color: inherit;">Политика конфиденциальности</a></li>
+                        <li><a href="#" style="text-decoration: none; color: inherit;">О нас</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+<script>
+        // Пример данных заявок
+        let applications = [
+            { name: "Немченко Юрий Дмитриевич", email: "yra222225522@gmail.com", program: "Системный администратор", date: "01.12.2024", status: "Обучение завершено" },
+            { name: "Ильина Анна Алексеевна", email: "annacitin@gmail.com", program: "Графический дизайнер", date: "10.12.2024", status: "Идет обучение" },
+            { name: "Лещенкова Анна Дмитреевна", email: "ilina1409anna@gmail.com", program: "Веб-разработчик", date: "15.12.2024", status: "Новая" },
+            { name: "Кузнецов Егор Владимирович", email: "kuznetsov@gmail.com", program: "Маркетолог", date: "01.12.2024", status: "Обучение завершено" }
+        ];
+
+        // Функция входа
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (username === 'Admin' && password === 'KorokNET') {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                loadApplications();
+            } else {
+                errorDiv.textContent = 'Неверный логин или пароль';
+            }
+        }
+
+        // Функция выхода
+        function logout() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('loginError').textContent = '';
+        }
+
+        // Функция загрузки заявок в таблицу
+        function loadApplications() {
+            const tableBody = document.getElementById('applicationsTableBody');
+            tableBody.innerHTML = '';
+            
+            applications.forEach((app, index) => {
+                const row = document.createElement('tr');
+                
+                // Определяем класс статуса для стилизации
+                let statusClass = '';
+                if (app.status === 'Новая') statusClass = 'status-new';
+                else if (app.status === 'Идет обучение') statusClass = 'status-in-progress';
+                else if (app.status === 'Обучение завершено') statusClass = 'status-completed';
+                
+                row.innerHTML = `
+                    <td>${app.name}</td>
+                    <td>${app.email}</td>
+                    <td>${app.program}</td>
+                    <td>${app.date}</td>
+                    <td><span class="${statusClass}">${app.status}</span></td>
+                    <td>
+                        ${app.status === 'Новая' ? 
+                            `<button class="action-btn" onclick="changeStatus(${index}, 'Идет обучение')">Начать обучение</button>` : 
+                            ''}
+                        ${app.status === 'Идет обучение' ? 
+                            `<button class="action-btn" onclick="changeStatus(${index}, 'Обучение завершено')">Завершить обучение</button>` : 
+                            ''}
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Функция изменения статуса заявки
+        function changeStatus(appIndex, newStatus) {
+            if (appIndex >= 0 && appIndex < applications.length) {
+                applications[appIndex].status = newStatus;
+                loadApplications();
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // По умолчанию показываем форму входа
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+        });
+    </script>
