@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,15 +55,15 @@
 
                 <div class="input-group">
                     <input 
-    type="tel" 
-    id="phone" 
-    name="phone" 
-    placeholder="+7 (999) 123-45-67" 
-    pattern="^\+7\s?\(\d{3}\)\s?\d{3}-\d{2}-\d{2}$"
-    title="Формат: +7 (999) 123-45-67"
-    required
-    class="input-field"
->
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        placeholder="+7 (999) 123-45-67" 
+                        pattern="^\+7\s?\(\d{3}\)\s?\d{3}-\d{2}-\d{2}$"
+                        title="Формат: +7 (999) 123-45-67"
+                        required
+                        class="input-field"
+                    />
                 </div>
 
                 <div class="input-group">
@@ -173,13 +173,59 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showMessage(result.message, 'success');
-                    // Очистка формы после успешной регистрации
-                    document.getElementById('registrationForm').reset();
-                    // Перенаправление на страницу входа через 2 секунды
-                    setTimeout(() => {
-                        window.location.href = 'Authorization.html';
-                    }, 2000);
+                    showMessage('Регистрация прошла успешно! Автоматический вход...', 'success');
+                    
+                    // После успешной регистрации автоматически логиним пользователя
+                    // Выполняем автоматический вход
+                    try {
+                        const loginResponse = await fetch('http://localhost:3006/auth', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                email: data.email,
+                                password: data.password
+                            })
+                        });
+
+                        const loginResult = await loginResponse.json();
+
+                        if (loginResult.success) {
+                            // Сохраняем данные пользователя
+                            localStorage.setItem('user', JSON.stringify(loginResult.user));
+                            localStorage.setItem('isAuthenticated', 'true');
+                            localStorage.setItem('userId', loginResult.user.user_id);
+                            localStorage.setItem('userName', loginResult.user.name);
+                            localStorage.setItem('userEmail', loginResult.user.email);
+
+                            console.log('✅ Автоматический вход выполнен:', loginResult.user);
+                            
+                            // Очистка формы после успешной регистрации
+                            document.getElementById('registrationForm').reset();
+                            
+                            // Перенаправление на главную страницу через 2 секунды
+                            setTimeout(() => {
+                                window.location.href = 'Main.html';
+                            }, 2000);
+                        } else {
+                            // Если автоматический вход не удался, все равно сохраняем ID
+                            localStorage.setItem('isAuthenticated', 'true');
+                            localStorage.setItem('userId', result.userId);
+                            showMessage('Регистрация успешна! Войдите в систему.', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'Authorization.html';
+                            }, 2000);
+                        }
+                    } catch (loginError) {
+                        console.error('Ошибка автоматического входа:', loginError);
+                        // Сохраняем хотя бы ID пользователя
+                        localStorage.setItem('userId', result.userId);
+                        showMessage('Регистрация успешна! Войдите в систему.', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'Authorization.html';
+                        }, 2000);
+                    }
                 } else {
                     showMessage(result.message, 'error');
                 }
@@ -202,6 +248,15 @@
         document.getElementById('phone').addEventListener('input', function(e) {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
             e.target.value = '+7' + (x[2] ? ' (' + x[2] : '') + (x[3] ? ') ' + x[3] : '') + (x[4] ? '-' + x[4] : '') + (x[5] ? '-' + x[5] : '');
+        });
+
+        // Проверяем, не авторизован ли пользователь
+        document.addEventListener('DOMContentLoaded', function() {
+            const isAuthenticated = localStorage.getItem('isAuthenticated');
+            if (isAuthenticated === 'true') {
+                console.log('Пользователь уже авторизован');
+                // Можно предложить перейти на главную
+            }
         });
     </script>
 </body>

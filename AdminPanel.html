@@ -98,84 +98,219 @@
 </html>
 
 <script>
-        // Пример данных заявок
-        let applications = [
-            { name: "Немченко Юрий Дмитриевич", email: "yra222225522@gmail.com", program: "Системный администратор", date: "01.12.2024", status: "Обучение завершено" },
-            { name: "Ильина Анна Алексеевна", email: "annacitin@gmail.com", program: "Графический дизайнер", date: "10.12.2024", status: "Идет обучение" },
-            { name: "Лещенкова Анна Дмитреевна", email: "ilina1409anna@gmail.com", program: "Веб-разработчик", date: "15.12.2024", status: "Новая" },
-            { name: "Кузнецов Егор Владимирович", email: "kuznetsov@gmail.com", program: "Маркетолог", date: "01.12.2024", status: "Обучение завершено" }
-        ];
+    let currentAdmin = null;
+    const API_BASE_URL = 'http://localhost:3006'; // Добавлена базовая ссылка на сервер
 
-        // Функция входа
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('loginError');
-            
-            if (username === 'Admin' && password === 'KorokNET') {
+    // Функция входа с проверкой роли
+    async function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('loginError');
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin-auth`, { // Исправлен URL
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: username,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                currentAdmin = result.user;
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('adminPanel').classList.remove('hidden');
                 loadApplications();
             } else {
-                errorDiv.textContent = 'Неверный логин или пароль';
+                errorDiv.textContent = result.message;
             }
+        } catch (error) {
+            console.error('Ошибка при авторизации:', error);
+            errorDiv.textContent = 'Ошибка соединения с сервером. Убедитесь, что сервер запущен на порту 3006.';
         }
+    }
 
-        // Функция выхода
-        function logout() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('adminPanel').classList.add('hidden');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('loginError').textContent = '';
+    // Функция выхода
+    function logout() {
+        currentAdmin = null;
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('adminPanel').classList.add('hidden');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('loginError').textContent = '';
+    }
+
+    // Функция загрузки заявок с сервера
+    async function loadApplications() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin-applications`); // Исправлен URL
+            const result = await response.json();
+
+            if (result.success) {
+                displayApplications(result.applications);
+            } else {
+                console.error('Ошибка при загрузке заявок:', result.message);
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке заявок:', error);
         }
+    }
 
-        // Функция загрузки заявок в таблицу
-        function loadApplications() {
-            const tableBody = document.getElementById('applicationsTableBody');
-            tableBody.innerHTML = '';
+    // Функция отображения заявок с группировкой по статусам
+    function displayApplications(applications) {
+        const tableBody = document.getElementById('applicationsTableBody');
+        tableBody.innerHTML = '';
+
+        // Группируем заявки по статусам
+        const groupedApplications = {
+            'new': applications.filter(app => app.status === 'new'),
+            'in_progress': applications.filter(app => app.status === 'in_progress'),
+            'completed': applications.filter(app => app.status === 'completed')
+        };
+
+        // Отображаем заявки по группам
+        Object.keys(groupedApplications).forEach(status => {
+            const statusApplications = groupedApplications[status];
             
-            applications.forEach((app, index) => {
-                const row = document.createElement('tr');
-                
-                // Определяем класс статуса для стилизации
-                let statusClass = '';
-                if (app.status === 'Новая') statusClass = 'status-new';
-                else if (app.status === 'Идет обучение') statusClass = 'status-in-progress';
-                else if (app.status === 'Обучение завершено') statusClass = 'status-completed';
-                
-                row.innerHTML = `
-                    <td>${app.name}</td>
-                    <td>${app.email}</td>
-                    <td>${app.program}</td>
-                    <td>${app.date}</td>
-                    <td><span class="${statusClass}">${app.status}</span></td>
-                    <td>
-                        ${app.status === 'Новая' ? 
-                            `<button class="action-btn" onclick="changeStatus(${index}, 'Идет обучение')">Начать обучение</button>` : 
-                            ''}
-                        ${app.status === 'Идет обучение' ? 
-                            `<button class="action-btn" onclick="changeStatus(${index}, 'Обучение завершено')">Завершить обучение</button>` : 
-                            ''}
+            if (statusApplications.length > 0) {
+                // Добавляем заголовок группы
+                const groupHeader = document.createElement('tr');
+                groupHeader.className = 'status-group-header';
+                groupHeader.innerHTML = `
+                    <td colspan="6" class="group-header">
+                        <strong>${getStatusDisplayName(status)}</strong>
+                        <span class="group-count">(${statusApplications.length} заявок)</span>
                     </td>
                 `;
-                
-                tableBody.appendChild(row);
-            });
-        }
+                tableBody.appendChild(groupHeader);
 
-        // Функция изменения статуса заявки
-        function changeStatus(appIndex, newStatus) {
-            if (appIndex >= 0 && appIndex < applications.length) {
-                applications[appIndex].status = newStatus;
-                loadApplications();
+                // Добавляем заявки этой группы
+                statusApplications.forEach((app) => {
+                    const row = document.createElement('tr');
+                    row.className = `application-row status-${app.status}`;
+                    
+                    const statusClass = getStatusClass(app.status);
+                    const statusDisplayName = getStatusDisplayName(app.status);
+                    
+                    row.innerHTML = `
+                        <td>${app.user_name} ${app.user_surname}</td>
+                        <td>${app.user_email}</td>
+                        <td>${app.course_name}</td>
+                        <td>${new Date(app.created_at).toLocaleDateString('ru-RU')}</td>
+                        <td><span class="status-badge ${statusClass}">${statusDisplayName}</span></td>
+                        <td class="actions-cell">
+                            ${app.status === 'new' ? 
+                                `<button class="action-btn start-btn" onclick="changeStatus(${app.application_id}, 'in_progress')">Начать обучение</button>` : 
+                                ''}
+                            ${app.status === 'in_progress' ? 
+                                `<button class="action-btn complete-btn" onclick="changeStatus(${app.application_id}, 'completed')">Завершить обучение</button>` : 
+                                ''}
+                            ${app.status === 'completed' ? 
+                                `<span class="completed-text">Обучение завершено</span>` : 
+                                ''}
+                            ${app.status !== 'completed' ? 
+                                `<button class="action-btn cancel-btn" onclick="changeStatus(${app.application_id}, 'new')">Вернуть в новые</button>` : 
+                                ''}
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
             }
+        });
+
+        // Если нет заявок
+        if (applications.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px;">Нет заявок для отображения</td>';
+            tableBody.appendChild(emptyRow);
+        }
+    }
+
+    // Функция изменения статуса заявки
+    async function changeStatus(applicationId, newStatus) {
+        if (!currentAdmin) {
+            alert('Ошибка: администратор не авторизован');
+            return;
         }
 
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            // По умолчанию показываем форму входа
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('adminPanel').classList.add('hidden');
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin-applications/${applicationId}/status`, { // Исправлен URL
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    newStatus: newStatus,
+                    adminId: currentAdmin.user_id
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Перезагружаем заявки
+                loadApplications();
+            } else {
+                alert('Ошибка при изменении статуса: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Ошибка при изменении статуса:', error);
+            alert('Ошибка соединения с сервером');
+        }
+    }
+
+    // Вспомогательные функции
+    function getStatusClass(status) {
+        switch(status) {
+            case 'new': return 'status-new';
+            case 'in_progress': return 'status-in-progress';
+            case 'completed': return 'status-completed';
+            default: return '';
+        }
+    }
+
+    // Функция для тестирования соединения с сервером
+    async function testConnection() {
+        try {
+            console.log('🔄 Тестирование соединения с сервером...');
+            const response = await fetch(`${API_BASE_URL}/admin-test`); // Исправлен URL
+            const result = await response.json();
+            console.log('✅ Тест соединения:', result);
+            return true;
+        } catch (error) {
+            console.error('❌ Ошибка тестирования соединения:', error);
+            return false;
+        }
+    }
+
+    function getStatusDisplayName(status) {
+        switch(status) {
+            case 'new': return 'Новая';
+            case 'in_progress': return 'В обучении';
+            case 'completed': return 'Завершено';
+            default: return status;
+        }
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Инициализация админ-панели...');
+        
+        // Тестируем соединение при загрузке
+        testConnection().then(success => {
+            if (!success) {
+                document.getElementById('loginError').textContent = 
+                    'Ошибка соединения с сервером. Проверьте, запущен ли сервер на порту 3006.';
+            }
         });
-    </script>
+
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('adminPanel').classList.add('hidden');
+    });
+</script>

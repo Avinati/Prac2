@@ -1,8 +1,8 @@
 const mysql = require('mysql2/promise');
 
 const dbConfig = {
-host:'localhost',
-  user:'root',
+host:'151.241.228.247',
+  user:'admin',
   password: 'root',
   database:'Korka',
   waitForConnections: true, 
