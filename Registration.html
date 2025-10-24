@@ -12,12 +12,14 @@
             <h2 class="t1">Регистрация</h2>
         </div>
         <div class="register-form">
-            <form>
+            <form id="registrationForm">
                 <div class="input-group">
                     <input 
                         placeholder="Имя"
                         type="text" 
                         class="input-field"
+                        name="name"
+                        required
                     />
                 </div>
                 
@@ -26,6 +28,8 @@
                         placeholder="Фамилия"
                         type="text" 
                         class="input-field"
+                        name="surename"
+                        required
                     />
                 </div>
                 
@@ -34,6 +38,8 @@
                         placeholder="Никнейм" 
                         type="text" 
                         class="input-field"
+                        name="nick"
+                        required
                     />
                 </div>
                 
@@ -42,19 +48,22 @@
                         placeholder="Email" 
                         type="email" 
                         class="input-field"
+                        name="email"
+                        required
                     />
                 </div>
 
                 <div class="input-group">
                     <input 
-                        type="tel" 
-                        id="phone" 
-                        name="phone" 
-                        placeholder="+7 (XXX) XXX-XX-XX" 
-                        pattern="\+7\s?[\(]{0,1}9[0-9]{2}[\)]{0,1}\s?\d{3}[-]{0,1}\d{2}[-]{0,1}\d{2}" 
-                        required
-                        class="input-field"
-                    >
+    type="tel" 
+    id="phone" 
+    name="phone" 
+    placeholder="+7 (999) 123-45-67" 
+    pattern="^\+7\s?\(\d{3}\)\s?\d{3}-\d{2}-\d{2}$"
+    title="Формат: +7 (999) 123-45-67"
+    required
+    class="input-field"
+>
                 </div>
 
                 <div class="input-group">
@@ -62,6 +71,9 @@
                         placeholder="Пароль" 
                         type="password" 
                         class="input-field"
+                        name="password"
+                        minlength="6"
+                        required
                     />
                 </div>
                 
@@ -70,6 +82,8 @@
                         placeholder="Повторите пароль" 
                         type="password" 
                         class="input-field"
+                        name="confirmPassword"
+                        required
                     />
                 </div>
                 
@@ -79,6 +93,7 @@
                             type="checkbox" 
                             class="checkbox-input" 
                             name="personalData"
+                            required
                         />
                         <span class="checkbox-text">Я соглашаюсь на обработку персональных данных *</span>
                     </label>
@@ -88,6 +103,7 @@
                             type="checkbox" 
                             class="checkbox-input" 
                             name="privacyPolicy"
+                            required
                         />
                         <span class="checkbox-text">Я соглашаюсь с Политикой Конфиденциальности этого сайта *</span>
                     </label>
@@ -102,6 +118,8 @@
                     </label>
                 </div>
 
+                <div id="message" style="display: none; margin-bottom: 15px; padding: 10px; border-radius: 5px;"></div>
+
                 <button type="submit" class="submit-btn">Зарегистрироваться</button>
                 
                 <div class="login-section">
@@ -111,5 +129,80 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                surename: formData.get('surename'),
+                nick: formData.get('nick'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                password: formData.get('password'),
+                personalData: formData.get('personalData') === 'on',
+                privacyPolicy: formData.get('privacyPolicy') === 'on',
+                notifications: formData.get('notifications') === 'on'
+            };
+
+            // Проверка паролей
+            const password = formData.get('password');
+            const confirmPassword = formData.get('confirmPassword');
+            
+            if (password !== confirmPassword) {
+                showMessage('Пароли не совпадают', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('Пароль должен содержать минимум 6 символов', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3006/reg', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    // Очистка формы после успешной регистрации
+                    document.getElementById('registrationForm').reset();
+                    // Перенаправление на страницу входа через 2 секунды
+                    setTimeout(() => {
+                        window.location.href = 'Authorization.html';
+                    }, 2000);
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        });
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.style.display = 'block';
+            messageDiv.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+            messageDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+            messageDiv.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+        }
+
+        // Маска для телефона
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            e.target.value = '+7' + (x[2] ? ' (' + x[2] : '') + (x[3] ? ') ' + x[3] : '') + (x[4] ? '-' + x[4] : '') + (x[5] ? '-' + x[5] : '');
+        });
+    </script>
 </body>
 </html>
