@@ -35,18 +35,6 @@
             <h2 class="t1">Ваши заявки:</h2>
         </div>
 
-        <!-- Блок информации о пользователе -->
-        <div id="userInfoSection" class="user-info-section" style="display: none;">
-            <div class="user-info-card">
-                <h3>👤 Информация о пользователе</h3>
-                <div class="user-details">
-                    <p><strong>Пользователь:</strong> <span id="currentUserName">Загрузка...</span></p>
-                    <p><strong>Email:</strong> <span id="currentUserEmail">Загрузка...</span></p>
-                    <p><strong>ID:</strong> <span id="currentUserId">Загрузка...</span></p>
-                </div>
-            </div>
-        </div>
-
         <!-- Блок предупреждения о необходимости авторизации -->
         <div id="authWarning" class="auth-warning" style="display: none;">
             <div class="warning-content">
@@ -76,30 +64,25 @@
     </div>
 
     <!-- Модальное окно для отзыва -->
-    <div id="reviewModal" class="modal">
+    <div id="reviewModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h3>Оставить отзыв</h3>
-            <div class="review-form">
+            <div class="course-info">
                 <p><strong>Специальность:</strong> <span id="modalSpecialty"></span></p>
                 <p><strong>Дата начала:</strong> <span id="modalStartDate"></span></p>
-                
-                <div class="rating-section">
-                    <p><strong>Оцените курс:</strong></p>
-                    <div class="rating-modal">
-                        <span class="star-modal" data-value="1">★</span>
-                        <span class="star-modal" data-value="2">★</span>
-                        <span class="star-modal" data-value="3">★</span>
-                        <span class="star-modal" data-value="4">★</span>
-                        <span class="star-modal" data-value="5">★</span>
-                    </div>
-                    <div class="rating-text">
-                        <span id="ratingValue">0</span>/5
-                    </div>
-                </div>
-
-                <button id="submitReview" class="btn-submit">Отправить отзыв</button>
             </div>
+            <div class="rating-section">
+                <p><strong>Ваша оценка:</strong> <span id="ratingValue">0</span>/5</p>
+                <div class="stars">
+                    <span class="star-modal" data-value="1">★</span>
+                    <span class="star-modal" data-value="2">★</span>
+                    <span class="star-modal" data-value="3">★</span>
+                    <span class="star-modal" data-value="4">★</span>
+                    <span class="star-modal" data-value="5">★</span>
+                </div>
+            </div>
+            <button id="submitReview" class="btn-primary">Отправить отзыв</button>
         </div>
     </div>
 
@@ -150,7 +133,11 @@
             async init() {
                 console.log('🚀 Инициализация страницы просмотра заявок');
                 await this.checkAuthentication();
-                this.setupEventListeners();
+                
+                // Ждем немного чтобы DOM точно загрузился
+                setTimeout(() => {
+                    this.setupEventListeners();
+                }, 100);
                 
                 if (this.currentUserId) {
                     await this.loadApplications();
@@ -158,44 +145,56 @@
             }
 
             async checkAuthentication() {
-                console.log('🔍 Проверка авторизации...');
+                console.log('🔍 ПРОВЕРКА АУТЕНТИФИКАЦИИ...');
                 
                 const isAuthenticated = localStorage.getItem('isAuthenticated');
-                const userId = localStorage.getItem('userId');
+                let userId = localStorage.getItem('userId');
                 const userName = localStorage.getItem('userName');
                 const userEmail = localStorage.getItem('userEmail');
 
-                console.log('Данные авторизации:', { isAuthenticated, userId, userName, userEmail });
+                console.log('📋 Данные из localStorage:', {
+                    isAuthenticated,
+                    userId,
+                    userName,
+                    userEmail
+                });
 
-                if (isAuthenticated === 'true' && userId) {
+                // Нормализуем userId
+                if (userId) {
+                    userId = parseInt(userId);
+                    console.log('🔢 userId после нормализации:', userId, typeof userId);
+                }
+
+                if (isAuthenticated === 'true' && userId && !isNaN(userId)) {
                     // Пользователь авторизован
                     this.currentUserId = userId;
                     this.currentUserName = userName || 'Пользователь';
                     this.currentUserEmail = userEmail || '';
 
-                    console.log('✅ Пользователь авторизован:', this.currentUserName);
+                    console.log('✅ ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН:', {
+                        id: this.currentUserId,
+                        name: this.currentUserName,
+                        email: this.currentUserEmail
+                    });
 
-                    // Показываем информацию о пользователе
-                    this.showUserInfo();
+                    // Обновляем приветствие
+                    const userGreeting = document.getElementById('userGreeting');
+                    if (userGreeting) {
+                        userGreeting.textContent = `Привет, ${this.currentUserName}!`;
+                    }
+
+                    // Показываем секцию авторизованного пользователя
                     document.getElementById('authSection').style.display = 'block';
                     document.getElementById('unauthSection').style.display = 'none';
                     document.getElementById('authWarning').style.display = 'none';
 
                 } else {
                     // Пользователь не авторизован
-                    console.log('❌ Пользователь не авторизован');
+                    console.log('❌ ПОЛЬЗОВАТЕЛЬ НЕ АВТОРИЗОВАН');
                     this.showAuthWarning();
                     document.getElementById('authSection').style.display = 'none';
                     document.getElementById('unauthSection').style.display = 'block';
                 }
-            }
-
-            showUserInfo() {
-                document.getElementById('userInfoSection').style.display = 'block';
-                document.getElementById('currentUserName').textContent = this.currentUserName;
-                document.getElementById('currentUserEmail').textContent = this.currentUserEmail;
-                document.getElementById('currentUserId').textContent = this.currentUserId;
-                document.getElementById('userGreeting').textContent = `Привет, ${this.currentUserName}!`;
             }
 
             showAuthWarning() {
@@ -206,28 +205,56 @@
             }
 
             async loadApplications() {
-                console.log('📥 Загрузка заявок для пользователя:', this.currentUserId);
+                console.log('🔍 ЗАГРУЗКА ЗАЯВОК:');
+                
+                // Получаем и нормализуем userId
+                let userId = localStorage.getItem('userId');
+                console.log('📍 userId из localStorage:', userId, typeof userId);
+                
+                // Преобразуем userId в число
+                userId = parseInt(userId);
+                console.log('📍 userId после parseInt:', userId, typeof userId);
+                
+                if (!userId || isNaN(userId)) {
+                    console.log('❌ Неверный userId:', userId);
+                    this.showErrorMessage('Ошибка: неверный идентификатор пользователя');
+                    return;
+                }
+                
+                console.log('📍 URL запроса:', `http://localhost:3006/user-applications?userId=${userId}`);
                 
                 document.getElementById('loadingMessage').style.display = 'block';
                 document.getElementById('applicationsList').style.display = 'none';
                 document.getElementById('noApplicationsMessage').style.display = 'none';
 
                 try {
-                    const response = await fetch(`http://localhost:3006/user-applications?userId=${this.currentUserId}`);
+                    const response = await fetch(`http://localhost:3006/user-applications?userId=${userId}`);
+                    console.log('📨 Статус ответа:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
                     const result = await response.json();
-
-                    console.log('Ответ сервера:', result);
+                    console.log('📊 Полный ответ сервера:', JSON.stringify(result, null, 2));
 
                     if (result.success) {
+                        console.log('✅ Успешно загружено заявок:', result.applications.length);
+                        console.log('📋 Заявки:', result.applications);
+                        
                         this.applications = result.applications;
                         this.displayApplications();
                     } else {
-                        throw new Error(result.message);
+                        console.log('❌ Ошибка от сервера:', result.message);
+                        this.showErrorMessage('Ошибка сервера: ' + result.message);
                     }
 
                 } catch (error) {
                     console.error('❌ Ошибка при загрузке заявок:', error);
                     this.showErrorMessage('Ошибка при загрузке заявок: ' + error.message);
+                    
+                    // Показываем тестовые данные для отладки
+                    this.showTestApplications();
                 } finally {
                     document.getElementById('loadingMessage').style.display = 'none';
                 }
@@ -301,6 +328,46 @@
                 return appDiv;
             }
 
+            // Метод для отображения тестовых данных
+            showTestApplications() {
+                console.log('🔄 Показываем тестовые данные для отладки');
+                
+                const testApplications = [
+                    {
+                        application_id: 1,
+                        course_name: 'Тестовый курс: Веб-разработка',
+                        status: 'new',
+                        created_at: new Date().toISOString(),
+                        desired_start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        price: 25000,
+                        has_review: false
+                    },
+                    {
+                        application_id: 2,
+                        course_name: 'Тестовый курс: Data Science',
+                        status: 'in_progress',
+                        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+                        desired_start_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+                        price: 35000,
+                        has_review: false
+                    }
+                ];
+                
+                this.applications = testApplications;
+                this.displayApplications();
+                
+                // Показываем предупреждение
+                const container = document.getElementById('applicationsList');
+                const warning = document.createElement('div');
+                warning.className = 'debug-warning';
+                warning.innerHTML = `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                        <strong>⚠️ Режим отладки:</strong> Показаны тестовые данные. Сервер недоступен.
+                    </div>
+                `;
+                container.prepend(warning);
+            }
+
             getStatusClass(status) {
                 switch(status) {
                     case 'new': return 'status-pending';
@@ -351,19 +418,28 @@
 
             setupEventListeners() {
                 // Выход из системы
-                document.getElementById('logoutBtn').addEventListener('click', () => {
-                    this.logout();
-                });
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', () => {
+                        this.logout();
+                    });
+                }
 
                 // Закрытие модального окна
-                document.querySelector('.close').addEventListener('click', () => {
-                    document.getElementById('reviewModal').style.display = 'none';
-                });
+                const closeModalBtn = document.querySelector('.close');
+                if (closeModalBtn) {
+                    closeModalBtn.addEventListener('click', () => {
+                        const modal = document.getElementById('reviewModal');
+                        if (modal) {
+                            modal.style.display = 'none';
+                        }
+                    });
+                }
 
                 // Клик вне модального окна
                 window.addEventListener('click', (event) => {
                     const modal = document.getElementById('reviewModal');
-                    if (event.target === modal) {
+                    if (modal && event.target === modal) {
                         modal.style.display = 'none';
                     }
                 });
@@ -377,9 +453,12 @@
                 });
 
                 // Отправка отзыва
-                document.getElementById('submitReview').addEventListener('click', () => {
-                    this.submitReview();
-                });
+                const submitReviewBtn = document.getElementById('submitReview');
+                if (submitReviewBtn) {
+                    submitReviewBtn.addEventListener('click', () => {
+                        this.submitReview();
+                    });
+                }
 
                 // Обновление заявок при фокусе на странице
                 window.addEventListener('focus', () => {
@@ -443,8 +522,10 @@
                     alert('❌ Ошибка при отправке отзыва');
                 } finally {
                     const submitBtn = document.getElementById('submitReview');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Отправить отзыв';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Отправить отзыв';
+                    }
                 }
             }
 

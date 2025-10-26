@@ -275,11 +275,14 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Сервер работает!' });
 });
 
-// Получение заявок пользователя с отзывами
 app.get('/user-applications', async (req, res) => {
     const { userId } = req.query;
+    
+    console.log('🔍 API /user-applications вызван с userId:', userId);
+    console.log('🔍 Тип userId:', typeof userId);
 
     if (!userId) {
+        console.log('❌ userId не предоставлен');
         return res.json({ 
             success: false, 
             message: 'ID пользователя обязателен' 
@@ -287,6 +290,8 @@ app.get('/user-applications', async (req, res) => {
     }
 
     try {
+        console.log('📊 Выполнение SQL запроса для userId:', userId);
+        
         const [applications] = await pool.execute(`
             SELECT 
                 a.application_id,
@@ -306,6 +311,9 @@ app.get('/user-applications', async (req, res) => {
             WHERE a.user_id = ?
             ORDER BY a.created_at DESC
         `, [userId]);
+
+        console.log('✅ Найдено заявок:', applications.length);
+        console.log('📋 Результаты:', applications);
 
         res.json({ 
             success: true, 
@@ -435,7 +443,7 @@ app.get('/course-reviews', async (req, res) => {
     }
 });
 
-// Эндпоинт для авторизации администратора с улучшенной обработкой ошибок
+// Эндпоинт для авторизации администратора с фиксированными учетными данными
 app.post('/admin-auth', async (req, res) => {
     console.log('📨 Получен запрос на авторизацию администратора');
     
@@ -451,61 +459,45 @@ app.post('/admin-auth', async (req, res) => {
 
         const { email, password } = req.body;
 
-        console.log('📧 Email:', email);
+        console.log('📧 Логин:', email);
         console.log('🔑 Пароль получен:', password ? 'да' : 'нет');
 
         if (!email || !password) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Email и пароль обязательны для заполнения' 
+                message: 'Логин и пароль обязательны для заполнения' 
             });
         }
 
-        // Выполняем запрос к базе данных
-        const [users] = await pool.execute(
-            'SELECT user_id, name, surname, nick, email, password, role FROM users WHERE email = ?',
-            [email]
-        );
+        // Проверяем фиксированные учетные данные
+        const ADMIN_CREDENTIALS = {
+            login: 'Admin',
+            password: 'KorokNET'
+        };
 
-        if (users.length === 0) {
-            console.log('❌ Пользователь не найден:', email);
+        if (email !== ADMIN_CREDENTIALS.login || password !== ADMIN_CREDENTIALS.password) {
+            console.log('❌ Неверные учетные данные администратора');
             return res.status(401).json({ 
                 success: false, 
-                message: 'Пользователь с таким email не найден' 
+                message: 'Неверный логин или пароль' 
             });
         }
 
-        const user = users[0];
-        console.log('👤 Найден пользователь:', user.email, 'Роль:', user.role);
+        console.log('✅ Успешная авторизация администратора');
 
-        // Проверяем, является ли пользователь администратором
-        if (user.role !== 'admin') {
-            console.log('🚫 Доступ запрещен для роли:', user.role);
-            return res.status(403).json({ 
-                success: false, 
-                message: 'Доступ запрещен. Недостаточно прав.' 
-            });
-        }
-
-        // Проверяем пароль
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        console.log('🔐 Проверка пароля:', isPasswordValid ? 'успешно' : 'неверно');
-        
-        if (!isPasswordValid) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Неверный пароль' 
-            });
-        }
-
-        console.log('✅ Успешная авторизация администратора:', user.email);
-
-        const { password: _, ...userWithoutPassword } = user;
+        // Создаем объект администратора (без сохранения в БД)
+        const adminUser = {
+            user_id: 0, // Специальный ID для администратора
+            name: 'Администратор',
+            surname: 'Системы',
+            email: ADMIN_CREDENTIALS.login,
+            role: 'admin'
+        };
         
         res.json({ 
             success: true, 
             message: 'Авторизация прошла успешно!',
-            user: userWithoutPassword
+            user: adminUser
         });
 
     } catch (error) {
@@ -649,4 +641,5 @@ app.get('/users', async (req, res) => {
         console.error('Ошибка при получении пользователей:', error);
         res.json({ success: false, message: 'Ошибка при получении пользователей' });
     }
-});     
+});   
+

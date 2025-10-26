@@ -29,15 +29,16 @@
             <h2 class="t1">Ваша заявка:</h2>
         </div>
         
-        
-        
+        <div id="authWarning" style="display: none; margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
+            <p><strong>Внимание:</strong> Для подачи заявки необходимо <a href="Authorization.html" style="color: #007bff;">авторизоваться</a></p>
+        </div>
         
         <!-- Специальность -->
         <div class="specialty-row">
             <p><strong>Специальность:</strong></p>
             <div class="container">
                 <div class="custom-select">
-                    <input type="text" id="searchInput" placeholder="Начните вводить..." class="list select-input">
+                    <input type="text" id="searchInput" placeholder="Начните вводить название курса..." class="list select-input">
                     <div class="custom-options" id="customOptions">
                         <!-- Опции будут загружены через JavaScript -->
                     </div>
@@ -62,7 +63,7 @@
                     <option value="6">Июнь</option>
                     <option value="7">Июль</option>
                     <option value="8">Август</option>
-                    <option value="9">Сентября</option>
+                    <option value="9">Сентябрь</option>
                     <option value="10">Октябрь</option>
                     <option value="11">Ноябрь</option>
                     <option value="12">Декабрь</option>
@@ -119,11 +120,7 @@
         const dateError = document.getElementById('dateError');
         const submitButton = document.getElementById('submitApplication');
         const messageDiv = document.getElementById('message');
-        const userInfoDiv = document.getElementById('userInfo');
         const authWarningDiv = document.getElementById('authWarning');
-        const currentUserNameSpan = document.getElementById('currentUserName');
-        const currentUserEmailSpan = document.getElementById('currentUserEmail');
-        const currentUserIdSpan = document.getElementById('currentUserId');
         const logoutBtn = document.getElementById('logoutBtn');
 
         // Инициализация при загрузке страницы
@@ -142,25 +139,23 @@
 
         // Проверка авторизации пользователя
         function checkAuthentication() {
-            console.log('🔍 Начало проверки авторизации...');
-            
-            const isAuthenticated = localStorage.getItem('isAuthenticated');
-            const userId = localStorage.getItem('userId');
-            const userName = localStorage.getItem('userName');
-            const userEmail = localStorage.getItem('userEmail');
+    console.log('🔍 Проверка авторизации...');
+    
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    let userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
 
-            console.log('📊 Данные из localStorage:');
-            console.log('- isAuthenticated:', isAuthenticated);
-            console.log('- userId:', userId);
-            console.log('- userName:', userName);
-            console.log('- userEmail:', userEmail);
-            
-            // Выводим все ключи localStorage для отладки
-            console.log('🗝️ Все ключи localStorage:', Object.keys(localStorage));
+    // Преобразуем userId в число, если он строковый
+    if (userId) {
+        userId = parseInt(userId);
+        console.log('🔢 userId после преобразования:', userId, typeof userId);
+    }
 
-            if (isAuthenticated === 'true' && userId && userId !== 'null' && userId !== 'undefined') {
-                // Пользователь авторизован
-                currentUserId = userId;
+    console.log('Данные авторизации:', { isAuthenticated, userId, userName, userEmail });
+
+    if (isAuthenticated === 'true' && userId) {
+        this.currentUserId = userId;
                 currentUserName = userName || 'Неизвестно';
                 currentUserEmail = userEmail || 'Неизвестно';
 
@@ -169,12 +164,6 @@
                 console.log('- Имя:', currentUserName);
                 console.log('- Email:', currentUserEmail);
 
-                // Показываем информацию о пользователе
-                currentUserNameSpan.textContent = currentUserName;
-                currentUserEmailSpan.textContent = currentUserEmail;
-                currentUserIdSpan.textContent = currentUserId;
-
-                userInfoDiv.style.display = 'block';
                 authWarningDiv.style.display = 'none';
                 submitButton.disabled = false;
                 
@@ -189,7 +178,6 @@
                 // Пользователь не авторизован
                 console.log('❌ Пользователь не авторизован или данные отсутствуют');
                 
-                userInfoDiv.style.display = 'none';
                 authWarningDiv.style.display = 'block';
                 submitButton.disabled = true;
                 submitButton.textContent = 'Необходима авторизация';
@@ -280,7 +268,14 @@
             const testCourses = [
                 { course_id: 1, name: 'Веб-разработка на JavaScript', price: 25000 },
                 { course_id: 2, name: 'Python для начинающих', price: 18000 },
-                { course_id: 3, name: 'Java Professional', price: 30000 }
+                { course_id: 3, name: 'Java Professional', price: 30000 },
+                { course_id: 4, name: 'Data Science с нуля', price: 35000 },
+                { course_id: 5, name: 'Frontend разработка', price: 22000 },
+                { course_id: 6, name: 'Мобильная разработка iOS', price: 28000 },
+                { course_id: 7, name: 'Базы данных и SQL', price: 15000 },
+                { course_id: 8, name: 'DevOps практики', price: 32000 },
+                { course_id: 9, name: 'Тестирование ПО', price: 19000 },
+                { course_id: 10, name: 'Веб-дизайн', price: 17000 }
             ];
             
             testCourses.forEach(course => {
@@ -303,70 +298,83 @@
             const selectInput = document.querySelector('.select-input');
             const customOptions = document.querySelectorAll('.option');
 
-            selectInput.addEventListener('focus', function() {
-                customSelect.classList.add('active');
-                customOptions.forEach(option => {
-                    option.style.display = 'block';
-                });
+            // Обработчик клика по полю ввода
+            selectInput.addEventListener('click', function() {
+                customSelect.classList.toggle('active');
+                updateOptionsVisibility();
             });
 
-            selectInput.addEventListener('blur', function() {
-                setTimeout(() => customSelect.classList.remove('active'), 200);
-            });
-
+            // Обработчик ввода текста для фильтрации
             selectInput.addEventListener('input', function() {
-                const filter = this.value.toLowerCase();
-                customOptions.forEach(option => {
-                    const text = option.textContent.toLowerCase();
-                    option.style.display = text.includes(filter) ? 'block' : 'none';
-                });
+                updateOptionsVisibility();
             });
 
+            // Обработчики для опций
             customOptions.forEach(option => {
-                option.addEventListener('mousedown', function(e) {
-                    e.preventDefault();
+                option.addEventListener('click', function(e) {
+                    e.stopPropagation();
                     const courseName = this.getAttribute('data-name');
                     const courseId = this.getAttribute('data-value');
                     const coursePrice = this.getAttribute('data-price');
+                    
                     selectInput.value = courseName;
                     selectInput.setAttribute('data-selected-id', courseId);
                     selectInput.setAttribute('data-selected-price', coursePrice);
+                    
                     customSelect.classList.remove('active');
                     console.log('Выбран курс:', courseName, 'ID:', courseId, 'Цена:', coursePrice);
+                    
+                    showMessage(`Выбран курс: ${courseName}`, 'success');
                 });
             });
 
+            // Закрытие селекта при клике вне его
             document.addEventListener('click', function(e) {
                 if (!customSelect.contains(e.target)) {
                     customSelect.classList.remove('active');
                 }
             });
+
+            // Функция обновления видимости опций
+            function updateOptionsVisibility() {
+                const filter = selectInput.value.toLowerCase();
+                customOptions.forEach(option => {
+                    const text = option.textContent.toLowerCase();
+                    if (text.includes(filter)) {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+            }
         }
 
         // Инициализация date picker
         function initializeDatePicker() {
-            initializeYears();
-            initializeDays();
+            populateYears();
+            populateDays();
             
+            // Обработчики изменений
             yearSelect.addEventListener('change', function() {
-                validateSelectedDate();
-                updateDays();
-                displaySelectedDate();
+                populateDays();
+                updateSelectedDateDisplay();
             });
 
             monthSelect.addEventListener('change', function() {
-                updateDays();
-                displaySelectedDate();
+                populateDays();
+                updateSelectedDateDisplay();
             });
 
-            daySelect.addEventListener('change', displaySelectedDate);
+            daySelect.addEventListener('change', updateSelectedDateDisplay);
         }
 
         // Заполнение годов
-        function initializeYears() {
+        function populateYears() {
             const currentYear = new Date().getFullYear();
             yearSelect.innerHTML = '<option value="">Год</option>';
-            for (let year = currentYear; year <= currentYear + 10; year++) {
+            
+            // Добавляем текущий год и следующие 5 лет
+            for (let year = currentYear; year <= currentYear + 5; year++) {
                 const option = document.createElement('option');
                 option.value = year;
                 option.textContent = year;
@@ -375,88 +383,57 @@
         }
 
         // Заполнение дней
-        function initializeDays() {
+        function populateDays() {
+            const selectedMonth = parseInt(monthSelect.value);
+            const selectedYear = parseInt(yearSelect.value);
+            
             daySelect.innerHTML = '<option value="">День</option>';
-            for (let day = 1; day <= 31; day++) {
+            
+            if (!selectedMonth || !selectedYear) {
+                // Если месяц или год не выбраны, показываем все дни
+                for (let day = 1; day <= 31; day++) {
+                    const option = document.createElement('option');
+                    option.value = day;
+                    option.textContent = day;
+                    daySelect.appendChild(option);
+                }
+                return;
+            }
+            
+            // Определяем количество дней в выбранном месяце
+            const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+            
+            for (let day = 1; day <= daysInMonth; day++) {
                 const option = document.createElement('option');
                 option.value = day;
-                option.textContent = day < 10 ? '0' + day : day;
+                option.textContent = day;
                 daySelect.appendChild(option);
             }
         }
 
-        // Валидация выбранной даты
-        function validateSelectedDate() {
-            const selectedYear = parseInt(yearSelect.value);
-            const selectedMonth = parseInt(monthSelect.value);
-            const selectedDay = parseInt(daySelect.value);
-
+        // Обновление отображения выбранной даты
+        function updateSelectedDateDisplay() {
+            const day = daySelect.value;
+            const month = monthSelect.value;
+            const year = yearSelect.value;
+            
             // Сбрасываем ошибки
             dateError.style.display = 'none';
             dateError.textContent = '';
-
-            // Проверка года
-            if (selectedYear && selectedYear < new Date().getFullYear()) {
-                dateError.style.display = 'block';
-                dateError.textContent = 'Нельзя выбрать прошедший год';
-                return false;
-            }
-
-            // Проверка полной даты
-            if (selectedYear && selectedMonth && selectedDay) {
-                const selectedDate = new Date(selectedYear, selectedMonth - 1, selectedDay);
+            
+            if (day && month && year) {
+                // Проверяем валидность даты
+                const selectedDate = new Date(year, month - 1, day);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
                 if (selectedDate < today) {
                     dateError.style.display = 'block';
                     dateError.textContent = 'Нельзя выбрать прошедшую дату';
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        // Обновление доступных дней при изменении месяца/года
-        function updateDays() {
-            const month = parseInt(monthSelect.value);
-            const year = parseInt(yearSelect.value);
-            
-            if (!month || !year) return;
-            
-            // Определяем количество дней в месяце
-            const daysInMonth = new Date(year, month, 0).getDate();
-            const selectedDay = parseInt(daySelect.value);
-            
-            // Обновляем список дней
-            daySelect.innerHTML = '<option value="">День</option>';
-            for (let day = 1; day <= daysInMonth; day++) {
-                const option = document.createElement('option');
-                option.value = day;
-                option.textContent = day < 10 ? '0' + day : day;
-                
-                // Автоматически выбираем день, если он был выбран ранее и все еще валиден
-                if (day === selectedDay && day <= daysInMonth) {
-                    option.selected = true;
+                    selectedDateDiv.innerHTML = '';
+                    return;
                 }
                 
-                daySelect.appendChild(option);
-            }
-        }
-
-        // Отображение выбранной даты
-        function displaySelectedDate() {
-            if (!validateSelectedDate()) {
-                selectedDateDiv.innerHTML = '';
-                return;
-            }
-
-            const day = daySelect.value;
-            const month = monthSelect.value;
-            const year = yearSelect.value;
-            
-            if (day && month && year) {
                 const months = [
                     '', 'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
                     'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
@@ -498,7 +475,8 @@
                 return;
             }
 
-            if (!validateSelectedDate()) {
+            // Проверяем, нет ли ошибки с датой
+            if (dateError.style.display === 'block') {
                 showMessage('Проверьте правильность выбранной даты', 'error');
                 return;
             }
