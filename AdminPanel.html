@@ -236,6 +236,7 @@ function displayApplications(applications) {
 }
 
     // Функция изменения статуса заявки
+// Функция изменения статуса заявки
 async function changeStatus(applicationId, newStatus) {
     if (!currentAdmin) {
         alert('Ошибка: администратор не авторизован');
@@ -244,18 +245,16 @@ async function changeStatus(applicationId, newStatus) {
 
     try {
         console.log('=== DEBUG CHANGE STATUS ===');
-        console.log('applicationId:', applicationId, 'type:', typeof applicationId);
-        console.log('newStatus:', newStatus, 'type:', typeof newStatus);
+        console.log('applicationId:', applicationId);
+        console.log('newStatus:', newStatus);
         console.log('currentAdmin:', currentAdmin);
 
-        // Пробуем разные форматы данных
+        // Исправленный запрос - используем newStatus вместо status
         const requestBody = {
-            status: newStatus,
-            admin_id: currentAdmin.user_id
+            newStatus: newStatus // Изменено с status на newStatus
         };
 
         console.log('Request body:', requestBody);
-        console.log('URL:', `${API_BASE_URL}/admin-applications/${applicationId}/status`);
 
         const response = await fetch(`${API_BASE_URL}/admin-applications/${applicationId}/status`, {
             method: 'PUT',
@@ -264,9 +263,6 @@ async function changeStatus(applicationId, newStatus) {
             },
             body: JSON.stringify(requestBody)
         });
-
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
 
         const result = await response.json();
         console.log('Full response:', result);
@@ -277,18 +273,12 @@ async function changeStatus(applicationId, newStatus) {
         } else {
             console.error('❌ Ошибка от сервера:', result.message);
             alert('Ошибка при изменении статуса: ' + result.message);
-            
-            // Показываем дополнительную информацию об ошибке
-            if (result.details) {
-                console.error('Детали ошибки:', result.details);
-            }
         }
     } catch (error) {
         console.error('❌ Ошибка при изменении статуса:', error);
         alert('Ошибка соединения с сервером: ' + error.message);
     }
 }
-
     // Вспомогательные функции
     function getStatusClass(status) {
         switch(status) {

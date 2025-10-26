@@ -563,18 +563,29 @@ app.get('/admin-applications', async (req, res) => {
 });
 
 // Обновление статуса заявки
+// Обновление статуса заявки (принимает оба варианта)
 app.put('/admin-applications/:id/status', async (req, res) => {
     const applicationId = req.params.id;
-    const { newStatus, adminId } = req.body;
+    const { newStatus, status } = req.body; // Принимаем оба варианта
 
-    if (!newStatus || !adminId) {
+    // Используем newStatus если есть, иначе status
+    const finalStatus = newStatus || status;
+
+    console.log('🔄 Обновление статуса заявки:', { 
+        applicationId, 
+        newStatus, 
+        status, 
+        finalStatus 
+    });
+
+    if (!finalStatus) {
         return res.json({ 
             success: false, 
-            message: 'Все поля обязательны для заполнения' 
+            message: 'Статус обязателен для заполнения' 
         });
     }
 
-    if (!['new', 'in_progress', 'completed'].includes(newStatus)) {
+    if (!['new', 'in_progress', 'completed'].includes(finalStatus)) {
         return res.json({ 
             success: false, 
             message: 'Неверный статус' 
@@ -600,17 +611,17 @@ app.put('/admin-applications/:id/status', async (req, res) => {
         // Обновляем статус заявки
         await pool.execute(
             'UPDATE applications SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE application_id = ?',
-            [newStatus, applicationId]
+            [finalStatus, applicationId]
         );
 
         // Добавляем запись в историю статусов
         await pool.execute(
-            `INSERT INTO application_status_history (application_id, old_status, new_status, changed_by, change_comment) 
-             VALUES (?, ?, ?, ?, ?)`,
-            [applicationId, oldStatus, newStatus, adminId, `Статус изменен администратором`]
+            `INSERT INTO application_status_history (application_id, old_status, new_status, change_comment) 
+             VALUES (?, ?, ?, ?)`,
+            [applicationId, oldStatus, finalStatus, `Статус изменен администратором`]
         );
 
-        console.log(`✅ Статус заявки ${applicationId} изменен с ${oldStatus} на ${newStatus}`);
+        console.log(`✅ Статус заявки ${applicationId} изменен с ${oldStatus} на ${finalStatus}`);
 
         res.json({ 
             success: true, 
